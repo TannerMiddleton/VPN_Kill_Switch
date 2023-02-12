@@ -1,0 +1,37 @@
+# Name of the program to monitor
+$Program = "nordvpn.exe"
+
+# Path to the batch file to run
+$BatchFile = ""
+
+$applicationStopped
+
+# Check if NordVPN is connected
+function Check-NordVPNConnection {
+  $NordVPNStatus = & 'C:\Program Files\NordVPN\NordVPN.exe' status --silent
+  if ($NordVPNStatus -match "Status: Connected") {
+    return $true
+  }
+  return $false
+}
+
+# Check if the program is running
+while ($true) {
+  $Process = Get-Process | Where-Object { $_.ProcessName -eq $Program }
+  $NordVPNConnected = Check-NordVPNConnection -wait
+
+  if ($Process -and $applicationStopped) {
+    $applicationStopped = $false
+    Write-Output "VPN Connected"
+  }
+
+  # If the program is not running, run the batch file
+  if (!$Process -and !$applicationStopped -or !$NordVPNConnected -and !$applicationStopped) {
+    Start-Process $BatchFile -Wait
+    $applicationStopped = $true
+    Write-Output "VPN Not Connected"
+  }
+
+  # Wait for 5 seconds before checking again
+  Start-Sleep -Seconds 5
+}
